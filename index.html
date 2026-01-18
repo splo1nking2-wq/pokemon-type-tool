@@ -15,10 +15,12 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      padding: 20px;
     }
 
     .app {
       width: 760px;
+      max-width: 100%;
       background: #0f172a;
       border-radius: 24px;
       padding: 28px;
@@ -43,19 +45,22 @@
       margin-bottom: 12px;
     }
 
-    input, select, button, textarea {
+    select, button, textarea {
       padding: 10px;
       border-radius: 12px;
       border: none;
       background: #1e293b;
       color: #e5e7eb;
       font-size: 14px;
+      flex-grow: 1;
     }
 
     button {
       cursor: pointer;
       background: linear-gradient(135deg, #38bdf8, #6366f1);
       font-weight: bold;
+      flex-grow: 0;
+      width: 120px;
     }
 
     button.secondary {
@@ -67,6 +72,7 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 6px;
+      min-height: 32px;
     }
 
     .pill {
@@ -74,6 +80,7 @@
       border-radius: 999px;
       background: #334155;
       font-size: 13px;
+      user-select: none;
     }
 
     .results {
@@ -87,12 +94,15 @@
       background: #020617;
       border-radius: 16px;
       padding: 12px;
+      min-height: 70px;
     }
 
     .panel h3 {
       margin-top: 0;
       font-size: 15px;
       margin-bottom: 6px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 4px;
     }
 
     textarea {
@@ -100,6 +110,8 @@
       resize: vertical;
       min-height: 90px;
       margin-top: 10px;
+      font-family: monospace;
+      font-size: 13px;
     }
   </style>
 </head>
@@ -119,28 +131,28 @@
       <button class="secondary" onclick="clearTypes()">Clear</button>
     </div>
 
-    <div class="pillbox" id="chosenTypes"></div>
+    <div class="pillbox" id="chosenTypes" title="Selected Types"></div>
 
     <div class="results">
       <div class="panel">
         <h3>Weak Against</h3>
-        <div id="weak"></div>
+        <div id="weak">None</div>
       </div>
       <div class="panel">
         <h3>Resistant To</h3>
-        <div id="resist"></div>
+        <div id="resist">None</div>
       </div>
       <div class="panel">
         <h3>Immune To</h3>
-        <div id="immune"></div>
+        <div id="immune">None</div>
       </div>
       <div class="panel">
         <h3>Offensively Strong Against</h3>
-        <div id="strong"></div>
+        <div id="strong">None</div>
       </div>
-      <div class="panel">
+      <div class="panel" style="grid-column: 1 / -1;">
         <h3>Offensively Resisted By</h3>
-        <div id="blocked"></div>
+        <div id="blocked">None</div>
       </div>
     </div>
 
@@ -150,25 +162,47 @@
 
   <!-- ================= JAVASCRIPT (LOGIC GOES HERE) ================= -->
   <script>
+    // Full list of types, including Stellar and Custom
+    const ALL_TYPES = [
+      "Normal", "Fire", "Water", "Electric", "Grass", "Ice",
+      "Fighting", "Poison", "Ground", "Flying", "Psychic",
+      "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel",
+      "Fairy", "Stellar",
+      "Custom"
+    ];
+
+    // Type effectiveness chart (simplified example, expand as needed)
     const typeChart = {
-      Fire: { weak: ["Water","Rock","Ground"], resist: ["Fire","Grass","Ice","Bug","Steel","Fairy"], strong: ["Grass","Ice","Bug","Steel"], blocked: ["Water","Rock","Fire"] },
-      Water: { weak: ["Electric","Grass"], resist: ["Fire","Water","Ice","Steel"], strong: ["Fire","Rock","Ground"], blocked: ["Water","Grass","Dragon"] },
-      Grass: { weak: ["Fire","Ice","Poison","Flying","Bug"], resist: ["Water","Electric","Grass","Ground"], strong: ["Water","Rock","Ground"], blocked: ["Fire","Grass","Poison","Flying","Bug","Dragon","Steel"] },
-      Electric: { weak: ["Ground"], resist: ["Electric","Flying","Steel"], strong: ["Water","Flying"], blocked: ["Electric","Grass","Dragon","Ground"] },
-      Ice: { weak: ["Fire","Fighting","Rock","Steel"], resist: ["Ice"], strong: ["Grass","Ground","Flying","Dragon"], blocked: ["Fire","Water","Ice","Steel"] },
-      Dragon: { weak: ["Ice","Dragon","Fairy"], resist: ["Fire","Water","Electric","Grass"], strong: ["Dragon"], blocked: ["Steel","Fairy"] },
-      Dark: { weak: ["Fighting","Bug","Fairy"], resist: ["Dark","Ghost"], immune: ["Psychic"], strong: ["Psychic","Ghost"], blocked: ["Fighting","Dark","Fairy"] },
-      Fairy: { weak: ["Poison","Steel"], resist: ["Fighting","Bug","Dark"], immune: ["Dragon"], strong: ["Dragon","Fighting","Dark"], blocked: ["Fire","Poison","Steel"] },
-      Stellar: { weak: [], resist: [], immune: [], strong: ["All"], blocked: [] }
+      Normal: { weak: ["Fighting"], resist: [], immune: ["Ghost"], strong: [], blocked: [] },
+      Fire: { weak: ["Water", "Rock", "Ground"], resist: ["Fire", "Grass", "Ice", "Bug", "Steel", "Fairy"], immune: [], strong: ["Grass", "Ice", "Bug", "Steel"], blocked: ["Water", "Rock", "Fire"] },
+      Water: { weak: ["Electric", "Grass"], resist: ["Fire", "Water", "Ice", "Steel"], immune: [], strong: ["Fire", "Rock", "Ground"], blocked: ["Water", "Grass", "Dragon"] },
+      Electric: { weak: ["Ground"], resist: ["Electric", "Flying", "Steel"], immune: [], strong: ["Water", "Flying"], blocked: ["Electric", "Grass", "Dragon"] },
+      Grass: { weak: ["Fire", "Ice", "Poison", "Flying", "Bug"], resist: ["Water", "Electric", "Grass", "Ground"], immune: [], strong: ["Water", "Rock", "Ground"], blocked: ["Fire", "Grass", "Poison", "Flying", "Bug", "Dragon", "Steel"] },
+      Ice: { weak: ["Fire", "Fighting", "Rock", "Steel"], resist: ["Ice"], immune: [], strong: ["Grass", "Ground", "Flying", "Dragon"], blocked: ["Fire", "Water", "Ice", "Steel"] },
+      Fighting: { weak: ["Flying", "Psychic", "Fairy"], resist: ["Bug", "Rock", "Dark"], immune: [], strong: ["Normal", "Ice", "Rock", "Dark", "Steel"], blocked: ["Poison", "Flying", "Psychic", "Bug", "Fairy"] },
+      Poison: { weak: ["Ground", "Psychic"], resist: ["Grass", "Fighting", "Poison", "Bug", "Fairy"], immune: [], strong: ["Grass", "Fairy"], blocked: ["Poison", "Ground", "Rock", "Ghost"] },
+      Ground: { weak: ["Water", "Grass", "Ice"], resist: ["Poison", "Rock"], immune: ["Electric"], strong: ["Fire", "Electric", "Poison", "Rock", "Steel"], blocked: ["Grass", "Bug"] },
+      Flying: { weak: ["Electric", "Ice", "Rock"], resist: ["Grass", "Fighting", "Bug"], immune: ["Ground"], strong: ["Grass", "Fighting", "Bug"], blocked: ["Electric", "Rock", "Steel"] },
+      Psychic: { weak: ["Bug", "Ghost", "Dark"], resist: ["Fighting", "Psychic"], immune: [], strong: ["Fighting", "Poison"], blocked: ["Steel", "Psychic"] },
+      Bug: { weak: ["Fire", "Flying", "Rock"], resist: ["Grass", "Fighting", "Ground"], immune: [], strong: ["Grass", "Psychic", "Dark"], blocked: ["Fire", "Fighting", "Poison", "Flying", "Ghost", "Steel", "Fairy"] },
+      Rock: { weak: ["Water", "Grass", "Fighting", "Ground", "Steel"], resist: ["Normal", "Fire", "Poison", "Flying"], immune: [], strong: ["Fire", "Ice", "Flying", "Bug"], blocked: ["Fighting", "Ground", "Steel"] },
+      Ghost: { weak: ["Ghost", "Dark"], resist: ["Poison", "Bug"], immune: ["Normal", "Fighting"], strong: ["Psychic", "Ghost"], blocked: ["Dark"] },
+      Dragon: { weak: ["Ice", "Dragon", "Fairy"], resist: ["Fire", "Water", "Electric", "Grass"], immune: [], strong: ["Dragon"], blocked: ["Steel", "Fairy"] },
+      Dark: { weak: ["Fighting", "Bug", "Fairy"], resist: ["Ghost", "Dark"], immune: ["Psychic"], strong: ["Psychic", "Ghost"], blocked: ["Fighting", "Dark", "Fairy"] },
+      Steel: { weak: ["Fire", "Fighting", "Ground"], resist: ["Normal", "Grass", "Ice", "Flying", "Psychic", "Bug", "Rock", "Dragon", "Steel", "Fairy"], immune: ["Poison"], strong: ["Ice", "Rock", "Fairy"], blocked: ["Fire", "Water", "Electric", "Steel"] },
+      Fairy: { weak: ["Poison", "Steel"], resist: ["Fighting", "Bug", "Dark"], immune: ["Dragon"], strong: ["Fighting", "Dragon", "Dark"], blocked: ["Fire", "Poison", "Steel"] },
+      Stellar: { weak: [], resist: [], immune: [], strong: ALL_TYPES.filter(t => t !== "Stellar" && t !== "Custom"), blocked: [] },
+      // Custom types will be added dynamically
     };
 
     let selectedTypes = [];
 
     const typeSelect = document.getElementById("typeSelect");
+    const chosenTypesContainer = document.getElementById("chosenTypes");
 
     function populateTypes() {
       typeSelect.innerHTML = "";
-      Object.keys(typeChart).forEach(type => {
+      ALL_TYPES.forEach(type => {
         const option = document.createElement("option");
         option.value = type;
         option.textContent = type;
@@ -179,7 +213,20 @@
     populateTypes();
 
     function addType() {
-      const type = typeSelect.value;
+      let type = typeSelect.value;
+
+      if (type === "Custom") {
+        type = prompt("Enter your custom type name:").trim();
+        if (!type) {
+          alert("Custom type name cannot be empty!");
+          return;
+        }
+      }
+
+      if (!typeChart[type]) {
+        typeChart[type] = { weak: [], resist: [], immune: [], strong: [], blocked: [] };
+      }
+
       if (!selectedTypes.includes(type)) {
         selectedTypes.push(type);
         updateUI();
@@ -192,17 +239,22 @@
     }
 
     function merge(field) {
-      const set = new Set();
-      selectedTypes.forEach(t => {
-        (typeChart[t][field] || []).forEach(x => set.add(x));
+      const merged = new Set();
+      selectedTypes.forEach(type => {
+        (typeChart[type][field] || []).forEach(t => merged.add(t));
       });
-      return [...set];
+      // Remove any types that are also selected to avoid confusion
+      selectedTypes.forEach(t => merged.delete(t));
+      return [...merged].sort();
     }
 
     function updateUI() {
-      document.getElementById("chosenTypes").innerHTML =
-        selectedTypes.map(t => `<span class="pill">${t}</span>`).join("");
+      // Show selected types as pills
+      chosenTypesContainer.innerHTML = selectedTypes
+        .map(type => `<span class="pill">${type}</span>`)
+        .join("");
 
+      // Update all results
       document.getElementById("weak").textContent = merge("weak").join(", ") || "None";
       document.getElementById("resist").textContent = merge("resist").join(", ") || "None";
       document.getElementById("immune").textContent = merge("immune").join(", ") || "None";
@@ -211,6 +263,10 @@
     }
 
     function generatePrompt() {
+      if (selectedTypes.length === 0) {
+        alert("Please add at least one type to generate a prompt.");
+        return;
+      }
       const prompt = `
 Design a Pokémon with the following types: ${selectedTypes.join(", ")}.
 Art style: Ken Sugimori official Pokémon illustration.
