@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pokémon Multi-Type Calculator with Custom Type Editor</title>
+  <title>Pokémon Multi-Type Calculator with Conditional Custom Type Form</title>
   <style>
     body {
       margin: 0;
@@ -146,6 +146,10 @@
       border-radius: 20px;
       margin-bottom: 28px;
       box-shadow: 0 0 20px #0e3f82;
+      display: none; /* hidden by default */
+    }
+    .custom-type-form.visible {
+      display: block;
     }
     .custom-type-form h2 {
       margin-top: 0;
@@ -165,7 +169,7 @@
 
     <!-- Type Selection -->
     <div class="row">
-      <select id="typeSelect"></select>
+      <select id="typeSelect" onchange="checkCustomTypeVisibility()"></select>
       <button onclick="addType()">Add Type</button>
       <button class="secondary" onclick="clearTypes()">Clear</button>
     </div>
@@ -196,7 +200,7 @@
     </div>
   </div>
 
-  <div class="app custom-type-form">
+  <div class="app custom-type-form" id="customTypeForm">
     <h2>Add Custom Type</h2>
 
     <div class="form-row">
@@ -233,6 +237,7 @@
       "Fighting", "Poison", "Ground", "Flying", "Psychic",
       "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel",
       "Fairy", "Stellar",
+      "Custom",
       // Custom types added here dynamically
     ];
 
@@ -255,13 +260,14 @@
       Dark: { weak: ["Fighting", "Bug", "Fairy"], resist: ["Ghost", "Dark"], immune: ["Psychic"], strong: ["Psychic", "Ghost"], blocked: ["Fighting", "Dark", "Fairy"] },
       Steel: { weak: ["Fire", "Fighting", "Ground"], resist: ["Normal", "Grass", "Ice", "Flying", "Psychic", "Bug", "Rock", "Dragon", "Steel", "Fairy"], immune: ["Poison"], strong: ["Ice", "Rock", "Fairy"], blocked: ["Fire", "Water", "Electric", "Steel"] },
       Fairy: { weak: ["Poison", "Steel"], resist: ["Fighting", "Bug", "Dark"], immune: ["Dragon"], strong: ["Fighting", "Dragon", "Dark"], blocked: ["Fire", "Poison", "Steel"] },
-      Stellar: { weak: [], resist: [], immune: [], strong: ALL_TYPES.filter(t => t !== "Stellar"), blocked: [] },
+      Stellar: { weak: [], resist: [], immune: [], strong: ALL_TYPES.filter(t => t !== "Stellar" && t !== "Custom"), blocked: [] },
     };
 
     let selectedTypes = [];
 
     const typeSelect = document.getElementById("typeSelect");
     const chosenTypesContainer = document.getElementById("chosenTypes");
+    const customTypeForm = document.getElementById("customTypeForm");
 
     function populateTypes() {
       typeSelect.innerHTML = "";
@@ -273,7 +279,16 @@
       });
     }
 
+    function checkCustomTypeVisibility() {
+      if (typeSelect.value === "Custom") {
+        customTypeForm.classList.add("visible");
+      } else {
+        customTypeForm.classList.remove("visible");
+      }
+    }
+
     populateTypes();
+    checkCustomTypeVisibility();
 
     function addType() {
       const type = typeSelect.value;
@@ -363,8 +378,13 @@
       strongInput.value = "";
       blockedInput.value = "";
 
-      alert(`Custom type "${name}" added! You can now select it from the dropdown.`)
+      alert(`Custom type "${name}" added! You can now select it from the dropdown.`);
+
+      // Automatically select new custom type
+      typeSelect.value = name;
+      customTypeForm.classList.remove("visible");
     }
   </script>
 </body>
 </html>
+
