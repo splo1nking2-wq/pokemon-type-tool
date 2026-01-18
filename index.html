@@ -81,6 +81,25 @@
       background: #334155;
       font-size: 13px;
       user-select: none;
+      position: relative;
+      cursor: default;
+    }
+
+    .pill .remove {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #ef4444;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+      line-height: 18px;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
     }
 
     .results {
@@ -122,7 +141,7 @@
   <div class="app">
     <h1>Pokémon Type Engine</h1>
     <div class="subtitle">
-      Supports unlimited types, Stellar, custom types, and AI-assisted design
+      Supports unlimited types, Stellar, custom types with full weaknesses and strengths, and AI-assisted design
     </div>
 
     <div class="row">
@@ -221,10 +240,28 @@
           alert("Custom type name cannot be empty!");
           return;
         }
-      }
 
-      if (!typeChart[type]) {
-        typeChart[type] = { weak: [], resist: [], immune: [], strong: [], blocked: [] };
+        if (typeChart[type]) {
+          alert("That custom type name already exists. Choose a different name.");
+          return;
+        }
+
+        // Helper to get comma-separated list and clean it up
+        function getListInput(message) {
+          const input = prompt(message + " (comma separated, leave blank for none):");
+          if (!input) return [];
+          return input.split(",").map(s => s.trim()).filter(Boolean);
+        }
+
+        const weak = getListInput("Enter weaknesses");
+        const resist = getListInput("Enter resistances");
+        const immune = getListInput("Enter immunities");
+        const strong = getListInput("Enter offensive strengths");
+        const blocked = getListInput("Enter offensive resistances (blocked)");
+
+        typeChart[type] = { weak, resist, immune, strong, blocked };
+        ALL_TYPES.push(type);
+        populateTypes();
       }
 
       if (!selectedTypes.includes(type)) {
@@ -241,7 +278,7 @@
     function merge(field) {
       const merged = new Set();
       selectedTypes.forEach(type => {
-        (typeChart[type][field] || []).forEach(t => merged.add(t));
+        (typeChart[type]?.[field] || []).forEach(t => merged.add(t));
       });
       // Remove any types that are also selected to avoid confusion
       selectedTypes.forEach(t => merged.delete(t));
@@ -249,9 +286,11 @@
     }
 
     function updateUI() {
-      // Show selected types as pills
+      // Show selected types as pills with remove buttons
       chosenTypesContainer.innerHTML = selectedTypes
-        .map(type => `<span class="pill">${type}</span>`)
+        .map(type => `
+          <span class="pill">${type}<span class="remove" onclick="removeType('${type}')">×</span></span>
+        `)
         .join("");
 
       // Update all results
@@ -260,6 +299,11 @@
       document.getElementById("immune").textContent = merge("immune").join(", ") || "None";
       document.getElementById("strong").textContent = merge("strong").join(", ") || "None";
       document.getElementById("blocked").textContent = merge("blocked").join(", ") || "None";
+    }
+
+    function removeType(type) {
+      selectedTypes = selectedTypes.filter(t => t !== type);
+      updateUI();
     }
 
     function generatePrompt() {
