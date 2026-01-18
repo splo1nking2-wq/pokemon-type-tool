@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pokémon Multi-Type Calculator</title>
-
-  <!-- ================= CSS (STYLES GO HERE) ================= -->
+  <title>Pokémon Multi-Type Calculator with Custom Type Editor</title>
   <style>
     body {
       margin: 0;
@@ -14,10 +12,9 @@
       color: #e5e7eb;
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       padding: 20px;
     }
-
     .app {
       width: 760px;
       max-width: 100%;
@@ -25,27 +22,20 @@
       border-radius: 24px;
       padding: 28px;
       box-shadow: 0 40px 90px rgba(0,0,0,.65);
+      margin-bottom: 40px;
     }
-
     h1 {
       text-align: center;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
       letter-spacing: 1px;
     }
-
-    .subtitle {
-      text-align: center;
-      opacity: .8;
-      margin-bottom: 20px;
-    }
-
     .row {
       display: flex;
       gap: 10px;
       margin-bottom: 12px;
+      flex-wrap: wrap;
     }
-
-    select, button, textarea {
+    select, button, input, textarea {
       padding: 10px;
       border-radius: 12px;
       border: none;
@@ -53,20 +43,26 @@
       color: #e5e7eb;
       font-size: 14px;
       flex-grow: 1;
+      min-width: 150px;
     }
-
     button {
       cursor: pointer;
       background: linear-gradient(135deg, #38bdf8, #6366f1);
       font-weight: bold;
       flex-grow: 0;
-      width: 120px;
+      width: 140px;
+      transition: background-color 0.3s ease;
     }
-
+    button:hover {
+      background: linear-gradient(135deg, #60a5fa, #818cf8);
+    }
     button.secondary {
       background: #334155;
+      width: 100px;
     }
-
+    button.secondary:hover {
+      background: #475569;
+    }
     .pillbox {
       display: flex;
       flex-wrap: wrap;
@@ -74,7 +70,6 @@
       margin-top: 6px;
       min-height: 32px;
     }
-
     .pill {
       padding: 6px 10px;
       border-radius: 999px;
@@ -83,12 +78,11 @@
       user-select: none;
       position: relative;
       cursor: default;
+      display: inline-flex;
+      align-items: center;
     }
-
     .pill .remove {
-      position: absolute;
-      top: -6px;
-      right: -6px;
+      margin-left: 8px;
       background: #ef4444;
       border-radius: 50%;
       width: 18px;
@@ -100,22 +94,23 @@
       text-align: center;
       cursor: pointer;
       user-select: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-
     .results {
       margin-top: 18px;
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 14px;
     }
-
     .panel {
       background: #020617;
       border-radius: 16px;
       padding: 12px;
       min-height: 70px;
+      word-wrap: break-word;
     }
-
     .panel h3 {
       margin-top: 0;
       font-size: 15px;
@@ -123,27 +118,52 @@
       border-bottom: 1px solid #334155;
       padding-bottom: 4px;
     }
-
-    textarea {
-      width: 100%;
-      resize: vertical;
-      min-height: 90px;
-      margin-top: 10px;
+    label {
+      font-size: 14px;
+      margin-bottom: 4px;
+      display: block;
+      color: #94a3b8;
+    }
+    textarea, input[type="text"] {
       font-family: monospace;
       font-size: 13px;
+      resize: vertical;
+      background: #1e293b;
+      color: #e5e7eb;
+      border: none;
+      border-radius: 12px;
+      padding: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 32px;
+    }
+    textarea {
+      min-height: 60px;
+    }
+    .custom-type-form {
+      background: #14233c;
+      padding: 20px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+      box-shadow: 0 0 20px #0e3f82;
+    }
+    .custom-type-form h2 {
+      margin-top: 0;
+      text-align: center;
+      color: #7dd3fc;
+      margin-bottom: 16px;
+    }
+    .form-row {
+      margin-bottom: 12px;
     }
   </style>
 </head>
 
 <body>
-
-  <!-- ================= HTML (UI GOES HERE) ================= -->
   <div class="app">
-    <h1>Pokémon Type Engine</h1>
-    <div class="subtitle">
-      Supports unlimited types, Stellar, custom types with full weaknesses and strengths, and AI-assisted design
-    </div>
+    <h1>Pokémon Type Calculator</h1>
 
+    <!-- Type Selection -->
     <div class="row">
       <select id="typeSelect"></select>
       <button onclick="addType()">Add Type</button>
@@ -174,23 +194,48 @@
         <div id="blocked">None</div>
       </div>
     </div>
-
-    <textarea id="aiPrompt" placeholder="Ask the AI to design a Pokémon using these types…"></textarea>
-    <button onclick="generatePrompt()">Generate Pokémon Design Prompt</button>
   </div>
 
-  <!-- ================= JAVASCRIPT (LOGIC GOES HERE) ================= -->
+  <div class="app custom-type-form">
+    <h2>Add Custom Type</h2>
+
+    <div class="form-row">
+      <label for="customName">Type Name</label>
+      <input id="customName" type="text" placeholder="E.g. Cosmic" />
+    </div>
+    <div class="form-row">
+      <label for="customWeak">Weaknesses (comma separated)</label>
+      <textarea id="customWeak" placeholder="E.g. Fire, Ice"></textarea>
+    </div>
+    <div class="form-row">
+      <label for="customResist">Resistances (comma separated)</label>
+      <textarea id="customResist" placeholder="E.g. Psychic, Dark"></textarea>
+    </div>
+    <div class="form-row">
+      <label for="customImmune">Immunities (comma separated)</label>
+      <textarea id="customImmune" placeholder="E.g. Normal"></textarea>
+    </div>
+    <div class="form-row">
+      <label for="customStrong">Offensive Strengths (comma separated)</label>
+      <textarea id="customStrong" placeholder="E.g. Fairy, Dragon"></textarea>
+    </div>
+    <div class="form-row">
+      <label for="customBlocked">Offensive Resistances (blocked) (comma separated)</label>
+      <textarea id="customBlocked" placeholder="E.g. Steel"></textarea>
+    </div>
+
+    <button onclick="addCustomType()">Add Custom Type</button>
+  </div>
+
   <script>
-    // Full list of types, including Stellar and Custom
     const ALL_TYPES = [
       "Normal", "Fire", "Water", "Electric", "Grass", "Ice",
       "Fighting", "Poison", "Ground", "Flying", "Psychic",
       "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel",
       "Fairy", "Stellar",
-      "Custom"
+      // Custom types added here dynamically
     ];
 
-    // Type effectiveness chart (simplified example, expand as needed)
     const typeChart = {
       Normal: { weak: ["Fighting"], resist: [], immune: ["Ghost"], strong: [], blocked: [] },
       Fire: { weak: ["Water", "Rock", "Ground"], resist: ["Fire", "Grass", "Ice", "Bug", "Steel", "Fairy"], immune: [], strong: ["Grass", "Ice", "Bug", "Steel"], blocked: ["Water", "Rock", "Fire"] },
@@ -210,8 +255,7 @@
       Dark: { weak: ["Fighting", "Bug", "Fairy"], resist: ["Ghost", "Dark"], immune: ["Psychic"], strong: ["Psychic", "Ghost"], blocked: ["Fighting", "Dark", "Fairy"] },
       Steel: { weak: ["Fire", "Fighting", "Ground"], resist: ["Normal", "Grass", "Ice", "Flying", "Psychic", "Bug", "Rock", "Dragon", "Steel", "Fairy"], immune: ["Poison"], strong: ["Ice", "Rock", "Fairy"], blocked: ["Fire", "Water", "Electric", "Steel"] },
       Fairy: { weak: ["Poison", "Steel"], resist: ["Fighting", "Bug", "Dark"], immune: ["Dragon"], strong: ["Fighting", "Dragon", "Dark"], blocked: ["Fire", "Poison", "Steel"] },
-      Stellar: { weak: [], resist: [], immune: [], strong: ALL_TYPES.filter(t => t !== "Stellar" && t !== "Custom"), blocked: [] },
-      // Custom types will be added dynamically
+      Stellar: { weak: [], resist: [], immune: [], strong: ALL_TYPES.filter(t => t !== "Stellar"), blocked: [] },
     };
 
     let selectedTypes = [];
@@ -232,37 +276,8 @@
     populateTypes();
 
     function addType() {
-      let type = typeSelect.value;
-
-      if (type === "Custom") {
-        type = prompt("Enter your custom type name:").trim();
-        if (!type) {
-          alert("Custom type name cannot be empty!");
-          return;
-        }
-
-        if (typeChart[type]) {
-          alert("That custom type name already exists. Choose a different name.");
-          return;
-        }
-
-        // Helper to get comma-separated list and clean it up
-        function getListInput(message) {
-          const input = prompt(message + " (comma separated, leave blank for none):");
-          if (!input) return [];
-          return input.split(",").map(s => s.trim()).filter(Boolean);
-        }
-
-        const weak = getListInput("Enter weaknesses");
-        const resist = getListInput("Enter resistances");
-        const immune = getListInput("Enter immunities");
-        const strong = getListInput("Enter offensive strengths");
-        const blocked = getListInput("Enter offensive resistances (blocked)");
-
-        typeChart[type] = { weak, resist, immune, strong, blocked };
-        ALL_TYPES.push(type);
-        populateTypes();
-      }
+      const type = typeSelect.value;
+      if (!type) return;
 
       if (!selectedTypes.includes(type)) {
         selectedTypes.push(type);
@@ -280,20 +295,17 @@
       selectedTypes.forEach(type => {
         (typeChart[type]?.[field] || []).forEach(t => merged.add(t));
       });
-      // Remove any types that are also selected to avoid confusion
       selectedTypes.forEach(t => merged.delete(t));
       return [...merged].sort();
     }
 
     function updateUI() {
-      // Show selected types as pills with remove buttons
       chosenTypesContainer.innerHTML = selectedTypes
         .map(type => `
           <span class="pill">${type}<span class="remove" onclick="removeType('${type}')">×</span></span>
         `)
         .join("");
 
-      // Update all results
       document.getElementById("weak").textContent = merge("weak").join(", ") || "None";
       document.getElementById("resist").textContent = merge("resist").join(", ") || "None";
       document.getElementById("immune").textContent = merge("immune").join(", ") || "None";
@@ -306,19 +318,53 @@
       updateUI();
     }
 
-    function generatePrompt() {
-      if (selectedTypes.length === 0) {
-        alert("Please add at least one type to generate a prompt.");
+    // Add custom type from form inputs
+    function addCustomType() {
+      const nameInput = document.getElementById("customName");
+      const weakInput = document.getElementById("customWeak");
+      const resistInput = document.getElementById("customResist");
+      const immuneInput = document.getElementById("customImmune");
+      const strongInput = document.getElementById("customStrong");
+      const blockedInput = document.getElementById("customBlocked");
+
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert("Please enter a custom type name.");
         return;
       }
-      const prompt = `
-Design a Pokémon with the following types: ${selectedTypes.join(", ")}.
-Art style: Ken Sugimori official Pokémon illustration.
-Include anatomy, personality, habitat, signature move, and visual motifs inspired by its typing.
-`;
-      document.getElementById("aiPrompt").value = prompt.trim();
+
+      if (typeChart[name]) {
+        alert("This type already exists.");
+        return;
+      }
+
+      // Helper to parse comma separated inputs
+      function parseList(text) {
+        if (!text.trim()) return [];
+        return text.split(",").map(s => s.trim()).filter(Boolean);
+      }
+
+      const weak = parseList(weakInput.value);
+      const resist = parseList(resistInput.value);
+      const immune = parseList(immuneInput.value);
+      const strong = parseList(strongInput.value);
+      const blocked = parseList(blockedInput.value);
+
+      typeChart[name] = { weak, resist, immune, strong, blocked };
+      ALL_TYPES.push(name);
+
+      populateTypes();
+
+      // Clear inputs after adding
+      nameInput.value = "";
+      weakInput.value = "";
+      resistInput.value = "";
+      immuneInput.value = "";
+      strongInput.value = "";
+      blockedInput.value = "";
+
+      alert(`Custom type "${name}" added! You can now select it from the dropdown.`)
     }
   </script>
-
 </body>
 </html>
