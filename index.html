@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pokémon Multi-Type Calculator</title>
+
+  <!-- ================= CSS (STYLES GO HERE) ================= -->
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", system-ui, sans-serif;
+      background: radial-gradient(circle at top, #1e293b, #020617);
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .app {
+      width: 760px;
+      background: #0f172a;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 40px 90px rgba(0,0,0,.65);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      text-align: center;
+      opacity: .8;
+      margin-bottom: 20px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    input, select, button, textarea {
+      padding: 10px;
+      border-radius: 12px;
+      border: none;
+      background: #1e293b;
+      color: #e5e7eb;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      font-weight: bold;
+    }
+
+    button.secondary {
+      background: #334155;
+    }
+
+    .pillbox {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #334155;
+      font-size: 13px;
+    }
+
+    .results {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .panel {
+      background: #020617;
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    .panel h3 {
+      margin-top: 0;
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      resize: vertical;
+      min-height: 90px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ================= HTML (UI GOES HERE) ================= -->
+  <div class="app">
+    <h1>Pokémon Type Engine</h1>
+    <div class="subtitle">
+      Supports unlimited types, Stellar, custom types, and AI-assisted design
+    </div>
+
+    <div class="row">
+      <select id="typeSelect"></select>
+      <button onclick="addType()">Add Type</button>
+      <button class="secondary" onclick="clearTypes()">Clear</button>
+    </div>
+
+    <div class="pillbox" id="chosenTypes"></div>
+
+    <div class="results">
+      <div class="panel">
+        <h3>Weak Against</h3>
+        <div id="weak"></div>
+      </div>
+      <div class="panel">
+        <h3>Resistant To</h3>
+        <div id="resist"></div>
+      </div>
+      <div class="panel">
+        <h3>Immune To</h3>
+        <div id="immune"></div>
+      </div>
+      <div class="panel">
+        <h3>Offensively Strong Against</h3>
+        <div id="strong"></div>
+      </div>
+      <div class="panel">
+        <h3>Offensively Resisted By</h3>
+        <div id="blocked"></div>
+      </div>
+    </div>
+
+    <textarea id="aiPrompt" placeholder="Ask the AI to design a Pokémon using these types…"></textarea>
+    <button onclick="generatePrompt()">Generate Pokémon Design Prompt</button>
+  </div>
+
+  <!-- ================= JAVASCRIPT (LOGIC GOES HERE) ================= -->
+  <script>
+    const typeChart = {
+      Fire: { weak: ["Water","Rock","Ground"], resist: ["Fire","Grass","Ice","Bug","Steel","Fairy"], strong: ["Grass","Ice","Bug","Steel"], blocked: ["Water","Rock","Fire"] },
+      Water: { weak: ["Electric","Grass"], resist: ["Fire","Water","Ice","Steel"], strong: ["Fire","Rock","Ground"], blocked: ["Water","Grass","Dragon"] },
+      Grass: { weak: ["Fire","Ice","Poison","Flying","Bug"], resist: ["Water","Electric","Grass","Ground"], strong: ["Water","Rock","Ground"], blocked: ["Fire","Grass","Poison","Flying","Bug","Dragon","Steel"] },
+      Electric: { weak: ["Ground"], resist: ["Electric","Flying","Steel"], strong: ["Water","Flying"], blocked: ["Electric","Grass","Dragon","Ground"] },
+      Ice: { weak: ["Fire","Fighting","Rock","Steel"], resist: ["Ice"], strong: ["Grass","Ground","Flying","Dragon"], blocked: ["Fire","Water","Ice","Steel"] },
+      Dragon: { weak: ["Ice","Dragon","Fairy"], resist: ["Fire","Water","Electric","Grass"], strong: ["Dragon"], blocked: ["Steel","Fairy"] },
+      Dark: { weak: ["Fighting","Bug","Fairy"], resist: ["Dark","Ghost"], immune: ["Psychic"], strong: ["Psychic","Ghost"], blocked: ["Fighting","Dark","Fairy"] },
+      Fairy: { weak: ["Poison","Steel"], resist: ["Fighting","Bug","Dark"], immune: ["Dragon"], strong: ["Dragon","Fighting","Dark"], blocked: ["Fire","Poison","Steel"] },
+      Stellar: { weak: [], resist: [], immune: [], strong: ["All"], blocked: [] }
+    };
+
+    let selectedTypes = [];
+
+    const typeSelect = document.getElementById("typeSelect");
+
+    function populateTypes() {
+      typeSelect.innerHTML = "";
+      Object.keys(typeChart).forEach(type => {
+        const option = document.createElement("option");
+        option.value = type;
+        option.textContent = type;
+        typeSelect.appendChild(option);
+      });
+    }
+
+    populateTypes();
+
+    function addType() {
+      const type = typeSelect.value;
+      if (!selectedTypes.includes(type)) {
+        selectedTypes.push(type);
+        updateUI();
+      }
+    }
+
+    function clearTypes() {
+      selectedTypes = [];
+      updateUI();
+    }
+
+    function merge(field) {
+      const set = new Set();
+      selectedTypes.forEach(t => {
+        (typeChart[t][field] || []).forEach(x => set.add(x));
+      });
+      return [...set];
+    }
+
+    function updateUI() {
+      document.getElementById("chosenTypes").innerHTML =
+        selectedTypes.map(t => `<span class="pill">${t}</span>`).join("");
+
+      document.getElementById("weak").textContent = merge("weak").join(", ") || "None";
+      document.getElementById("resist").textContent = merge("resist").join(", ") || "None";
+      document.getElementById("immune").textContent = merge("immune").join(", ") || "None";
+      document.getElementById("strong").textContent = merge("strong").join(", ") || "None";
+      document.getElementById("blocked").textContent = merge("blocked").join(", ") || "None";
+    }
+
+    function generatePrompt() {
+      const prompt = `
+Design a Pokémon with the following types: ${selectedTypes.join(", ")}.
+Art style: Ken Sugimori official Pokémon illustration.
+Include anatomy, personality, habitat, signature move, and visual motifs inspired by its typing.
+`;
+      document.getElementById("aiPrompt").value = prompt.trim();
+    }
+  </script>
+
+</body>
+</html>
